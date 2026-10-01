@@ -775,7 +775,10 @@ class RenderSliverWaterfallFlow extends RenderSliverMultiBoxAdaptor
           _previousCrossAxisChildrenData!.constraints.crossAxisExtent !=
               constraints.crossAxisExtent) {
         _previousCrossAxisChildrenData = null;
-        collectGarbage(childCount, 0);
+        // From index 0, performLayout re-flows the live children in order.
+        if (firstChild != null && indexOf(firstChild!) != 0) {
+          collectGarbage(childCount, 0);
+        }
       }
     }
   }
