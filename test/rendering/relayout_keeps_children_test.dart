@@ -43,6 +43,58 @@ void main() {
       expect(_rects(tester), expectedTwo);
     });
 
+    testWidgets(
+        'a column-count change at the top still lays out correctly when scrolled back up',
+        (WidgetTester tester) async {
+      final List<double> offsets = <double>[
+        for (double offset = 1000.0; offset >= 0.0; offset -= 37.0) offset,
+      ];
+      final Map<double, Map<int, Rect>> expected = <double, Map<int, Rect>>{};
+      for (final double offset in offsets) {
+        expected[offset] = _visible(
+          await _freshLayout(
+            tester,
+            width: 393.0,
+            crossAxisCount: 3,
+            scrollOffset: offset,
+          ),
+        );
+      }
+
+      final _Lifecycle lifecycle = _Lifecycle();
+      final ScrollController controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _grid(
+          width: 393.0,
+          crossAxisCount: 2,
+          lifecycle: lifecycle,
+          controller: controller,
+        ),
+      );
+      await tester.pumpWidget(
+        _grid(
+          width: 393.0,
+          crossAxisCount: 3,
+          lifecycle: lifecycle,
+          controller: controller,
+        ),
+      );
+      controller.jumpTo(offsets.first);
+      await tester.pump();
+      expect(_rects(tester).keys, isNot(contains(0)));
+
+      final List<double> mismatches = <double>[];
+      for (final double offset in offsets) {
+        controller.jumpTo(offset);
+        await tester.pump();
+        if (!_sameLayout(_visible(_rects(tester)), expected[offset]!)) {
+          mismatches.add(offset);
+        }
+      }
+      expect(mismatches, isEmpty);
+    });
+
     testWidgets('a width change while scrolled down still lays out correctly',
         (WidgetTester tester) async {
       final Map<int, Rect> expected = await _freshLayout(tester,
@@ -100,6 +152,24 @@ Map<int, Rect> _rects(WidgetTester tester) {
         in tester.widgetList<_Tile>(find.byType(_Tile, skipOffstage: false)))
       tile.index: tester.getRect(find.byWidget(tile, skipOffstage: false)),
   };
+}
+
+Map<int, Rect> _visible(Map<int, Rect> rects) {
+  return <int, Rect>{
+    for (final MapEntry<int, Rect> entry in rects.entries)
+      if (entry.value.bottom > 0.0 && entry.value.top < 600.0)
+        entry.key: entry.value,
+  };
+}
+
+bool _sameLayout(Map<int, Rect> actual, Map<int, Rect> expected) {
+  return actual.length == expected.length &&
+      expected.keys.every((int index) {
+        final Rect? rect = actual[index];
+        return rect != null &&
+            (rect.topLeft - expected[index]!.topLeft).distance < 1e-6 &&
+            (rect.bottomRight - expected[index]!.bottomRight).distance < 1e-6;
+      });
 }
 
 Widget _grid({

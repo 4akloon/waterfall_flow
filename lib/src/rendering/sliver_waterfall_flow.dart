@@ -855,7 +855,7 @@ class _CrossAxisChildrenData {
             gridDelegate.getCrossAxisOffset(constraints, data.crossAxisIndex);
 
         data.layoutOffset = 0.0;
-        data.indexes.clear();
+        data.indexes = <int>[];
         trailingChildren.add(data);
         leadingChildren.add(data);
       }
